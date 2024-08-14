@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Shifts</title>
+    <style>
+        .option {
+            display: inline-block;
+            padding: 20px;
+            margin: 10px;
+            border: 2px solid black;
+            cursor: pointer;
+        }
+        .selected {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <!-- <h1>Select Two Shifts</h1>
+    <div class="option" data-value="Shift 1">Shift 1</div>
+    <div class="option" data-value="Shift 2">Shift 2</div>
+    <div class="option" data-value="Shift 3">Shift 3</div>
+    <div class="option" data-value="Shift 4">Shift 4</div> -->
+
+    <div>Employee</div>
+
+    <% employees.forEach(employee => { %>
+        <div class="option" data-value="<%= employee._id %>"><%= employee.employeeId %></div> 
+    <% }) %>
+
+    <div>Shift</div>
+    <% shifts.forEach(shift => { %>
+        <div class="option"  data-value="<%= shift._id %>" > <%= shift.shiftNumber %> </div> 
+    <% }) %>
+    
+    <button id="submit">Assign</button>
+
+    <script>
+        const options = document.querySelectorAll('.option');
+        const selectedOptions = [];
+
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                if (selectedOptions.length < 2 || option.classList.contains('selected')) {
+                    option.classList.toggle('selected');
+                    if (option.classList.contains('selected')) {
+                        selectedOptions.push(option.getAttribute('data-value'));
+                    } else {
+                        const index = selectedOptions.indexOf(option.getAttribute('data-value'));
+                        if (index > -1) {
+                            selectedOptions.splice(index, 1);
+                        }
+                    }
+                }
+            });
+        });
+
+        document.getElementById('submit').addEventListener('click', () => {
+            if (selectedOptions.length === 2) {
+                fetch('/addAssigned', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ selections: selectedOptions })
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.text().then(data => console.log('Server Response:', data));
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            } else {
+                alert('Please select exactly two options.');
+            }
+        });
+    </script>
+</body>
+</html>
