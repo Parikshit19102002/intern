@@ -28,7 +28,9 @@ const LocalStrategy = require('passport-local');
 const MongoStore=require('connect-mongo')
 const bodyParser=require('body-parser');
 const {isLoggedIn}=require('./midleWare.js');
-const Shift=require('./templete/shift.js')
+const Shift=require('./templete/shift.js');
+const employee = require('./templete/employee.js');
+const { emphasize } = require('@mui/material');
 // const app=express();
 app.engine('ejs',ejsMate);
 app.set('view engine','ejs');
@@ -253,7 +255,7 @@ app.post('/login',passport.authenticate('local',{failureFlash:false,failureRedir
   app.get('/allAssigned',async(req,res)=>{
     const employees=await Employee.find({});
     console.log(employees)
-    const full_details=employees;
+    const full_details = employees;
 console.log("pura details",full_details);
     
 
@@ -270,7 +272,8 @@ console.log("pura details",full_details);
       employee.shifts.map(shift => ({
         username: employee.username,
         shiftNumber: shift.shiftNumber,
-        date: shift.date
+        date: shift.date,
+        useremail:employee.useremail
       }))
     );
     
@@ -354,13 +357,168 @@ app.post('/addAssigned', async (req, res) => {
   }
 });
 
+function getNext(beforeShift){
+  if(beforeShift==="9 AM - 1 PM") return "1 PM - 5 PM";
+  else if(beforeShift==="1 PM - 5 PM") return "4 PM - 9 PM";
+  else if(beforeShift==="4 PM - 9 PM") return "7 PM - 12 PM";
+  else return "No Problem";
+}
 
 
+app.get('/checkAssignment',async (req,res)=>{
 
+  const employees=await Employee.find({});
+  let isValid=true;
+  const len=employees[0].shifts.length;
+
+  let count=0;
+
+  for(let employee of employees){ 
+      count+=employee.shifts.length;
+  }
+
+  let n=employees.length;
+
+  count=Math.floor(count/n);
+
+  console.log("count",count);
 
   
+  for(let employee of employees){
+
+    if(employee.shifts.length!==count && employee.shifts.length!==count+1){
+      isValid=false;
+      break;
+    }
+
+    let mp = new Map();
+
+    for(let shift of employee.shifts){
+      mp.set(shift.shiftNumber,shift.date);
+    }
+
+    let mp1 = new Map();
+
+    for(let shift of employee.shifts){
+      mp1.set(shift.shiftNumber, []);
+    }
+
+    for(let shift of employee.shifts){
+      mp1.get(shift.shiftNumber).push(shift.date);
+    }
+
+    for(let shift of employee.shifts){
+      console.log("x",mp1.get(shift.shiftNumber).length);
+
+      if((mp.has(getNext(shift.shiftNumber)) || mp.has(shift.shiftNumber)) && mp.get(getNext(shift.shiftNumber))===mp.get(shift.shiftNumber) || mp1.get(shift.shiftNumber).length>1){
+        isValid=false;
+        break;
+      }
+    }
+
+    if(isValid===false) 
+      break;
+  }
+
+  return res.status(201).json({
+    validity:isValid
+  })
+  
+})
+
+app.get('/deleteAssigned', async (req, res) => {
+  try {
+      const employees = await Employee.find({});
+      console.log("Employees from delete::", employees);
+
+      for (let employee of employees) {
+          await Employee.updateOne(
+              { employeeId: employee.employeeId },  // Correctly reference the employeeId
+              { $set: { shifts: [] } }              // Clear the shifts array
+          );
+      }
+
+      res.status(200).send('All employee shifts have been cleared.');
+  } catch (error) {
+      console.error('Error clearing shifts:', error);
+      res.status(500).send('An error occurred while clearing shifts.');
+  }
+});
 
 
+app.get('/adminLogout',(req,res)=>{
+  req.session.destroy((err) => {
+      if (err) {
+          return res.redirect('/');
+      }
+      res.clearCookie('connect.sid');
+      res.redirect('/adminLogin');
+  });
+})
+
+app.post('/adminRegister',async (req,res)=>{
+// console.log("inside signup post",req.body)
+const {adminId,username,password}=req.body;
+const user=new User({username,adminId});
+console.log(user);
+const find_existing=await User.findOne({email});
+console.log(find_existing)
+
+        if(find_existing)
+      {
+        console.log("already h bro!!")
+          return res.status(400).json({message:"user aleady exist !!"})
+      }
+
+// const h=await User.register(user,password);
+// req.login(h,(err)=>{
+//    if(err) return next(err);
+//   //  res.redirect('/');
+// })
+// res.status(201).json({
+//   message: "User created successfully!",
+//   user: {
+//     id: h.id,
+//     name: h.username,
+//     email: h.email,
+//   },
+// });
+try {
+  const h = await User.register(user, password);
+  req.login(h, (err) => {
+      if (err) return next(err);
+  });
+
+  res.status(201).json({
+      message: "User created successfully!",
+      data: {
+          userid: h.id,
+          username: h.username,
+          email: h.email,
+      },
+  });
+} catch (err) {
+  if (err.name === 'UserExistsError') {
+      // Catch UserExistsError thrown by passport-local-mongoose
+      return res.status(400).json({ message: "A user with the given username is already registered" });
+  }
+  return next(err); // Handle other errors
+}
+// res.redirect('/');
+})
+
+app.post('/adminLogin',passport.authenticate('local',{failureFlash:false,failureRedirect:'/login'}),(req,res)=>{
+console.log("login back prr",req.body) 
+const url=req.session.returnTo || '/';
+const userdata=req.body;
+delete req.session.returnTo;
+res.status(201).json({
+message:"user login successfully!",
+ data:userdata
+
+})
+// res.redirect(url);
+})
 
 
 

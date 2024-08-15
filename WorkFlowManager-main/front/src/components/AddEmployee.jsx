@@ -25,7 +25,8 @@ export default function AddEmployee({islogin,setlogin}) {
     console.log(data)
     const userinfo={
       username:data.username,
-     employeeId:data.employeeId,
+      employeeId:data.employeeId,
+      useremail:data.email
       
     }
 
@@ -75,6 +76,8 @@ export default function AddEmployee({islogin,setlogin}) {
      {...register("employeeId", { required: true })}  />
   <input type="text" className="input input-bordered flex items-center gap-2" placeholder="Username" 
      {...register("username", { required: true })} />
+     <input type="email" className="input input-bordered flex items-center gap-2" placeholder="Email" 
+     {...register("email", { required: true })} />
 
 
     </div>

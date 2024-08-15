@@ -14,8 +14,9 @@ const contactSchema = new mongoose.Schema({
 
 
 const EmployeeSchema=new mongoose.Schema({
-       employeeId:{ type:String, require:true, unique: true  },
-       username:{ type:String, require:true, unique: true  },
+       employeeId:{ type:String, require:true },
+       username:{ type:String, require:true, unique: true },
+       useremail:{type:String,require:true,unique:true},
        shifts:[contactSchema]
 });
 
